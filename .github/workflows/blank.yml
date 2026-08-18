@@ -11,15 +11,22 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   build:
-    # The type of runner that the job will run on
+    env:
+      platform: aws
+      region: us-east-1
+      account: 123456789012
+
     runs-on: ubuntu-latest
+
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      # Runs a single command using the runners shell
-      - name: "Mostrar mensajea"
-        run: echo "Hello, CI!"
+      - name: "Mostrar mensaje"
+        run: echo "Hola mundo"
+
+      - name: "Mostrando variables de entorno"
+        run: |
+          echo "Esto es el valor de platform: ${{ env.platform }}"
+          echo "Esto es el valor de region: ${{ env.region }}"
+          echo "esto es el valor de account: ${{ env.account }}"
