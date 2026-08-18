@@ -23,10 +23,10 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       - name: "Mostrar mensaje"
-        run: echo "Hola mundo"
+        run: echo "Hola CLAUDIO"
 
       - name: "Mostrando variables de entorno"
-        #if: ${{env.platform=='azure'}}
+        if: ${{env.platform=='azure'}}
         run: |
           echo "Esto es el valor de platform: ${{ env.platform }}"
           echo "Esto es el valor de region: ${{ env.region }}"
