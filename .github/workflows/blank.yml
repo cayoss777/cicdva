@@ -14,6 +14,9 @@ on:
 jobs:
   build:
     env:
+      username: ${{secrets.USERNAME}} 
+      password: ${{secrets.PASSWORD}}
+
       platform: aws
       region: us-east-1
       account: 123456789012
@@ -31,6 +34,10 @@ jobs:
           echo "Esto es el valor de platform: ${{ env.platform }}"
           echo "Esto es el valor de region: ${{ env.region }}"
           echo "esto es el valor de account: ${{ env.account }}"
+      - name: "Mostrando variables SECRETS"
+        run: |
+          echo "Esto es el valor de username: ${{ env.username }}"
+          echo "Esto es el valor de password: ${{ env.password }}"
       - name: "Mostrando variables por defecto"
         #if: ${{env.platform=='aws'}}
         run: |
