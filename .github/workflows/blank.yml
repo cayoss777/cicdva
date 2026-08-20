@@ -1,4 +1,4 @@
-name: CI CI AWS 03   # Cambia el nombre para que coincida con la imagen (opcional)
+name: CI CI AWS 03
 
 on:
   push:
@@ -11,7 +11,6 @@ jobs:
       platform: aws
       region: us-east-1
       account: 123456789012
-      # Los secretos se referencian directamente en los pasos, no es necesario ponerlos en env
 
     runs-on: ubuntu-latest
 
@@ -19,21 +18,27 @@ jobs:
       - name: Mostrar mensaje
         run: echo "Hola CLAUDIOS"
 
-      # Este paso solo se ejecutará si platform es 'azure' (nunca ocurre con la configuración actual)
-      - name: Mostrando variables de entorno (solo para Azure)
-        if: env.platform == 'azure'
+      # Ahora se ejecutará para AWS (condición cambiada)
+      - name: Mostrando variables de entorno
+        if: env.platform == 'aws'
         run: |
           echo "Platform: ${{ env.platform }}"
           echo "Region: ${{ env.region }}"
           echo "Account: ${{ env.account }}"
 
-      # ⚠️ ELIMINADO el paso que imprimía secretos – ¡NUNCA hagas eso!
+      # (Opcional) Verificar que los secretos existen (sin mostrarlos)
+      - name: Verificar secretos requeridos
+        run: |
+          if [ -z "${{ secrets.EC2_HOST }}" ]; then echo "❌ EC2_HOST no definido"; exit 1; fi
+          if [ -z "${{ secrets.EC2_USERNAME }}" ]; then echo "❌ EC2_USERNAME no definido"; exit 1; fi
+          if [ -z "${{ secrets.EC2_SSH_KEY }}" ]; then echo "❌ EC2_SSH_KEY no definido"; exit 1; fi
+          if [ -z "${{ secrets.PROJECT_PATH }}" ]; then echo "❌ PROJECT_PATH no definido"; exit 1; fi
+          echo "✅ Todos los secretos están definidos"
 
       - name: Mostrando variables por defecto (evento)
         run: |
           echo "Evento: ${{ toJSON(github.event) }}"
 
-      # Despliegue a EC2 usando la acción oficial de SSH
       - name: Deploy to EC2 en AWS6
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -41,13 +46,21 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            set -e   # Salir ante cualquier error
+            set -e
 
             echo "Navigating to project directory..."
             cd ${{ secrets.PROJECT_PATH }}
 
+            # Si el directorio no existe, clonar el repositorio automáticamente
+            if [ ! -d ".git" ]; then
+              echo "El directorio no contiene un repositorio git. Clonando..."
+              cd ..
+              git clone https://github.com/${{ github.repository }}.git $(basename ${{ secrets.PROJECT_PATH }})
+              cd ${{ secrets.PROJECT_PATH }}
+            fi
+
             echo "Pulling latest changes from main..."
-            git pull origin main   # Cambiado de 'master' a 'main'
+            git pull origin main
 
             echo "Installing dependencies..."
             npm install
