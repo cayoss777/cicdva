@@ -1,44 +1,85 @@
-# This is a basic workflow to help you get started with Actions
+name: CI CI AWS 03
 
-name: CI
-
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
     branches: [ "main" ]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
-  build:
-    env:
-      username: ${{secrets.USERNAME}} 
-      password: ${{secrets.PASSWORD}}
+  deploy:
+    name: Deploy Node.js app to EC2
+    runs-on: ubuntu-latest
 
+    env:
       platform: aws
       region: us-east-1
       account: 123456789012
 
-    runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      - name: "Mostrar mensaje"
-        run: echo "Hola CLAUDIOS"
+      # 1. Clonar el repositorio en el runner
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: "Mostrando variables de entorno"
-        if: ${{env.platform=='azure'}}
+      # 2. Verificar que los secretos necesarios existen
+      - name: Verificar secretos requeridos
         run: |
-          echo "Esto es el valor de platform: ${{ env.platform }}"
-          echo "Esto es el valor de region: ${{ env.region }}"
-          echo "esto es el valor de account: ${{ env.account }}"
-      - name: "Mostrando variables SECRETS"
+          for secret in EC2_HOST EC2_USERNAME EC2_SSH_KEY PROJECT_PATH; do
+            if [ -z "${!secret}" ]; then
+              echo "❌ El secreto $secret no está definido"
+              exit 1
+            fi
+          done
+          echo "✅ Todos los secretos están definidos"
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          PROJECT_PATH: ${{ secrets.PROJECT_PATH }}
+
+      # 3. (Opcional) Mostrar variables de entorno (solo para AWS)
+      - name: Mostrar variables de entorno
+        if: env.platform == 'aws'
         run: |
-          echo "Esto es el valor de username: ${{ env.username }}"
-          echo "Esto es el valor de password: ${{ env.password }}"
-      - name: "Mostrando variables por defecto"
-        #if: ${{env.platform=='aws'}}
-        run: |
-          echo "Evento: ${{toJSON(github.event)}}"
+          echo "Platform: ${{ env.platform }}"
+          echo "Region: ${{ env.region }}"
+          echo "Account: ${{ env.account }}"
+
+      # 4. Desplegar usando SSH
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+
+            echo "=== Iniciando despliegue en EC2 ==="
+
+            # Crear el directorio del proyecto si no existe
+            mkdir -p ${{ secrets.PROJECT_PATH }}
+
+            # Ir al directorio del proyecto
+            cd ${{ secrets.PROJECT_PATH }}
+
+            # Si no es un repositorio git, clonarlo o inicializarlo
+            if [ ! -d ".git" ]; then
+              echo "No hay repositorio git. Clonando..."
+              git clone https://github.com/${{ github.repository }}.git .
+            else
+              echo "Repositorio git existente. Haciendo pull..."
+              git pull origin main
+            fi
+
+            echo "Instalando dependencias..."
+            npm install --production
+
+            echo "Reiniciando aplicación con PM2..."
+            pm2 restart index || pm2 start index.js --name index
+
+            echo "=== Despliegue completado ==="
+
+      # (Opcional) Paso adicional: notificar éxito o fallo
+      - name: Notificar éxito
+        if: success()
+        run: echo "✅ Despliegue exitoso"
