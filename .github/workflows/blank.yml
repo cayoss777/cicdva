@@ -34,7 +34,7 @@ jobs:
           echo "Evento: ${{ toJSON(github.event) }}"
 
       # Despliegue a EC2 usando la acción oficial de SSH
-      - name: Deploy to EC2
+      - name: Deploy to EC2 en AWS
         uses: appleboy/ssh-action@v1.0.3   # <-- Aquí estaba el error principal
         with:
           host: ${{ secrets.EC2_HOST }}
