@@ -1,69 +1,58 @@
-# This is a basic workflow to help you get started with Actions
+name: CI CI AWS 03   # Cambia el nombre para que coincida con la imagen (opcional)
 
-name: CI
-
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
     branches: [ "main" ]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
   build:
     env:
-      username: ${{secrets.USERNAME}} 
-      password: ${{secrets.PASSWORD}}
-
       platform: aws
       region: us-east-1
       account: 123456789012
+      # Los secretos se referencian directamente en los pasos, no es necesario ponerlos en env
 
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      - name: "Mostrar mensaje"
+      - name: Mostrar mensaje
         run: echo "Hola CLAUDIOS"
 
-      - name: "Mostrando variables de entorno"
-        if: ${{env.platform=='azure'}}
+      # Este paso solo se ejecutará si platform es 'azure' (nunca ocurre con la configuración actual)
+      - name: Mostrando variables de entorno (solo para Azure)
+        if: env.platform == 'azure'
         run: |
-          echo "Esto es el valor de platform: ${{ env.platform }}"
-          echo "Esto es el valor de region: ${{ env.region }}"
-          echo "esto es el valor de account: ${{ env.account }}"
-      - name: "Mostrando variables SECRETS"
+          echo "Platform: ${{ env.platform }}"
+          echo "Region: ${{ env.region }}"
+          echo "Account: ${{ env.account }}"
+
+      # ⚠️ ELIMINADO el paso que imprimía secretos – ¡NUNCA hagas eso!
+
+      - name: Mostrando variables por defecto (evento)
         run: |
-          echo "Esto es el valor de username: ${{ env.username }}"
-          echo "Esto es el valor de password: ${{ env.password }}"
-      - name: "Mostrando variables por defecto"
-        #if: ${{env.platform=='aws'}}
-        run: |
-          echo "Evento: ${{toJSON(github.event)}}"
-        # Step 3: SSH into EC2 and deploy
-      - name: "Deploy to EC2"
+          echo "Evento: ${{ toJSON(github.event) }}"
+
+      # Despliegue a EC2 usando la acción oficial de SSH
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3   # <-- Aquí estaba el error principal
         with:
-          host: ${{ secrets.EC2_HOST }}        # EC2 server hostname/IP
-          username: ${{ secrets.EC2_USERNAME }} # EC2 username
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}   # Añade este secreto (clave privada PEM)
           script: |
+            set -e   # Salir ante cualquier error
+
             echo "Navigating to project directory..."
             cd ${{ secrets.PROJECT_PATH }}
 
-            echo "Pulling latest changes..."
-            git pull origin master
+            echo "Pulling latest changes from main..."
+            git pull origin main   # Cambiado de 'master' a 'main'
 
             echo "Installing dependencies..."
             npm install
 
-            echo "Checking if PM2 is already running the app..."
-            if pm2 list | grep -q "index"; then
-              echo "App already exists, restarting..."
-              pm2 restart index
-            else
-              echo "App not found, starting first-time deploy..."
-              pm2 start index.js --name index
-            fi
+            echo "Restarting or starting app with PM2..."
+            pm2 restart index || pm2 start index.js --name index
 
             echo "Deployment complete!"
