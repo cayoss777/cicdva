@@ -1,71 +1,44 @@
-name: CI CI AWS 03
+# This is a basic workflow to help you get started with Actions
 
+name: CI
+
+# Controls when the workflow will run
 on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
     branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
   build:
     env:
+      username: ${{secrets.USERNAME}} 
+      password: ${{secrets.PASSWORD}}
+
       platform: aws
       region: us-east-1
       account: 123456789012
 
     runs-on: ubuntu-latest
 
+    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      - name: Mostrar mensaje
+      - name: "Mostrar mensaje"
         run: echo "Hola CLAUDIOS"
 
-      # Ahora se ejecutará para AWS (condición cambiada)
-      - name: Mostrando variables de entorno
-        if: env.platform == 'aws'
+      - name: "Mostrando variables de entorno"
+        if: ${{env.platform=='azure'}}
         run: |
-          echo "Platform: ${{ env.platform }}"
-          echo "Region: ${{ env.region }}"
-          echo "Account: ${{ env.account }}"
-
-      # (Opcional) Verificar que los secretos existen (sin mostrarlos)
-      - name: Verificar secretos requeridos
+          echo "Esto es el valor de platform: ${{ env.platform }}"
+          echo "Esto es el valor de region: ${{ env.region }}"
+          echo "esto es el valor de account: ${{ env.account }}"
+      - name: "Mostrando variables SECRETS"
         run: |
-          if [ -z "${{ secrets.EC2_HOST }}" ]; then echo "❌ EC2_HOST no definido"; exit 1; fi
-          if [ -z "${{ secrets.EC2_USERNAME }}" ]; then echo "❌ EC2_USERNAME no definido"; exit 1; fi
-          if [ -z "${{ secrets.EC2_SSH_KEY }}" ]; then echo "❌ EC2_SSH_KEY no definido"; exit 1; fi
-          if [ -z "${{ secrets.PROJECT_PATH }}" ]; then echo "❌ PROJECT_PATH no definido"; exit 1; fi
-          echo "✅ Todos los secretos están definidos"
-
-      - name: Mostrando variables por defecto (evento)
+          echo "Esto es el valor de username: ${{ env.username }}"
+          echo "Esto es el valor de password: ${{ env.password }}"
+      - name: "Mostrando variables por defecto"
+        #if: ${{env.platform=='aws'}}
         run: |
-          echo "Evento: ${{ toJSON(github.event) }}"
-
-      - name: Deploy to EC2 en AWS6
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            set -e
-
-            echo "Navigating to project directory..."
-            cd ${{ secrets.PROJECT_PATH }}
-
-            # Si el directorio no existe, clonar el repositorio automáticamente
-            if [ ! -d ".git" ]; then
-              echo "El directorio no contiene un repositorio git. Clonando..."
-              cd ..
-              git clone https://github.com/${{ github.repository }}.git $(basename ${{ secrets.PROJECT_PATH }})
-              cd ${{ secrets.PROJECT_PATH }}
-            fi
-
-            echo "Pulling latest changes from main..."
-            git pull origin main
-
-            echo "Installing dependencies..."
-            npm install
-
-            echo "Restarting or starting app with PM2..."
-            pm2 restart index || pm2 start index.js --name index
-
-            echo "Deployment complete!"
+          echo "Evento: ${{toJSON(github.event)}}"
