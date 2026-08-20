@@ -35,11 +35,11 @@ jobs:
 
       # Despliegue a EC2 usando la acción oficial de SSH
       - name: Deploy to EC2 en AWS6
-        uses: appleboy/ssh-action@v1.0.3   # <-- Aquí estaba el error principal
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}   # Añade este secreto (clave privada PEM)
+          key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -e   # Salir ante cualquier error
 
